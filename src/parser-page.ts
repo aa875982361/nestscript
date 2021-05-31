@@ -34,11 +34,12 @@ build({
   output: targetEs5JsPath
 }).then(()=>{
   console.log("打包完成", targetEs5JsPath);
-  process.exec('./nsc/bin/run compile ./example/page.all.es5.js ./example/main',function (error: string) {
+  process.exec('./nsc/bin/run compile ./example/page.all.es5.js ./example/main',function (error: string, stdout: string) {
       if (error !== null) {
         console.log('exec error: ' + error);
         return
       }
+      console.log(stdout);
       console.log("编译为二进制文件完成");
   });
 })
