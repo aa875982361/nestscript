@@ -34,13 +34,11 @@ build({
   output: targetEs5JsPath
 }).then(()=>{
   console.log("打包完成", targetEs5JsPath);
-  process.exec('cd /Users/plinghuang/plinghuang/project/nestscript && ./nsc/bin/run compile ./example/page.all.es5.js ./example/main',function (error: string) {
+  process.exec('./nsc/bin/run compile ./example/page.all.es5.js ./example/main',function (error: string) {
       if (error !== null) {
         console.log('exec error: ' + error);
         return
       }
       console.log("编译为二进制文件完成");
-      
-
   });
 })
