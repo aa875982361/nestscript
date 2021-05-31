@@ -63,7 +63,7 @@ export default function(wxmlPath: string, targetPath?: string): string{
   function renderFunction(data = {}){
     // 遍历节点 将属性值为函数的都执行一遍 获得渲染结果
     const newVdoms = walkTemplateDoms(templateVDomCreateList, data)
-    console.log("newVdoms", JSON.stringify(newVdoms, null, 2));
+    // console.log("newVdoms", JSON.stringify(newVdoms, null, 2));
     return newVdoms
   }
   
