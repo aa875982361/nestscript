@@ -34,7 +34,7 @@ A script nested in JavaScript, dynamically runs code in environment without `eva
 
 它包含三部分：
 
-1. **代码生成器**：将 JavaScript 编译成 `nestscript` 中间指令。
+1. **代码生成器**：将 JavaScript 编译成 `nestscript` 中间指令，[参考文档](./compile.md)。
 2. **汇编器**：将中间指令编译成可运行在 `nestscript` 虚拟机的二进制文件。
 3. **虚拟机**：执行汇编器生成的二进制文件。
 
