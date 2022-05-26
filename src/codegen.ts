@@ -101,6 +101,7 @@ class Codegen {
 }
 
 /**
+ * 获得当前作用域下的变量声明
  * 为了处理这种情况：
  * ```
  * i = 1
@@ -108,10 +109,14 @@ class Codegen {
  * ```
  */
 const getVariablesByFunctionAstBody = (ast: any): Map<string, any> => {
+  console.log("ast", JSON.stringify(ast, null, 2));
+  
   const locals = new Map()
   walk.recursive(ast, locals, {
     VariableDeclaration: (node: et.VariableDeclaration, s: any, c: any): void => {
-      // console.log("VARIABLE...", node)
+      console.log("VariableDeclaration", node, s, c);
+      
+      // console.log("VARIABLE...", JSON.stringify(node, null, 2))
       s.varKind = node.kind
       node.declarations.forEach((n: any): void => c(n, s))
       delete s.varKind
@@ -223,7 +228,7 @@ const parseToCode = (ast: any): void => {
     if (originalFunctionName && !isFuntionExpression) {
       cg([`FUNC`, `${originalFunctionName}`, `${funcName}`], { prior })
     }
-    delete s.funcName
+
     return funcName
   }
 
@@ -478,6 +483,13 @@ const parseToCode = (ast: any): void => {
     }
   }
 
+  /**
+   * 获取node的值
+   * @param node 
+   * @param reg 
+   * @param s 
+   * @param c 
+   */
   const getValueOfNode = (node: any, reg: string, s: IState, c: any): any => {
     if (node.type === 'Identifier') {
       if (reg) {
@@ -560,13 +572,16 @@ const parseToCode = (ast: any): void => {
    */
   walk.recursive(ast, state, {
     Identifier: (node: et.Identifier, s: any, c: any): void => {
+      console.log("Identifier", JSON.stringify(node, null, 2))
+
+      // 自变量获取值
       if (s.r0) {
         getValueOfNode(node, s.r0, s, c)
       }
     },
-
+    // 变量声明描述
     VariableDeclaration: (node: et.VariableDeclaration, s: any, c: any): void => {
-      // console.log("VARIABLE...", node)
+      console.log("VARIABLE...", JSON.stringify(node, null, 2))
       s.varKind = node.kind
       node.declarations.forEach((n: any): void => c(n, s))
       delete s.varKind
@@ -574,7 +589,7 @@ const parseToCode = (ast: any): void => {
 
     /** 要处理 (global, local) * (function, other) 的情况 */
     VariableDeclarator: (node: et.VariableDeclarator, s: any, c: any): void => {
-      // console.log(node)
+      console.log("VariableDeclarator", JSON.stringify(node, null, 2))
       const [newReg, freeReg] = newRegisterController()
       let reg
       // let funcName = ''
@@ -612,6 +627,8 @@ const parseToCode = (ast: any): void => {
     },
 
     FunctionDeclaration(node: et.FunctionDeclaration, s: any, c: any): any {
+      console.log("FunctionDeclaration", JSON.stringify(node, null, 2))
+
       if (s.r0 && !state.isGlobal) {
         parseFunc(node, s)
       } else {
@@ -623,6 +640,8 @@ const parseToCode = (ast: any): void => {
     },
 
     CallExpression(node: et.CallExpression, s: any, c: any): any {
+      console.log("CallExpression", JSON.stringify(node, null, 2))
+
       const retReg = s.r0
       const isNewExpression = !!s.isNewExpression
       delete s.isNewExpression
@@ -664,6 +683,7 @@ const parseToCode = (ast: any): void => {
     },
 
     Literal: (node: et.Literal, s: any): void => {
+      console.log("Literal", JSON.stringify(node, null, 2))
       const unescape = (ss: string): string => ss.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 
       if ((node as any).regex) {
@@ -688,21 +708,46 @@ const parseToCode = (ast: any): void => {
       }
     },
 
+    /**
+     * 箭头表达式
+     * @param node 
+     * @param s 
+     * @param c 
+     */
     ArrowFunctionExpression(node: et.ArrowFunctionExpression, s: any, c: any): any {
+      console.log("ArrowFunctionExpression", JSON.stringify(node, null, 2))
       parseFunc(node, s)
     },
 
+    /**
+     * 函数表达式
+     * @param node 
+     * @param s 
+     * @param c 
+     */
     FunctionExpression(node: et.FunctionExpression, s: any, c: any): any {
+      console.log("FunctionExpression", JSON.stringify(node, null, 2))
+
       parseFunc(node, s)
     },
 
+    /**
+     * 块级作用域
+     * @param node 
+     * @param s 
+     * @param c 
+     */
     BlockStatement(node: et.BlockStatement, s: any, c: any): void {
+      console.log("BlockStatement", JSON.stringify(node, null, 2))
+
       const restoreBlockChain = newBlockChain()
       node.body.forEach((n: any): void => c(n, s))
       restoreBlockChain()
     },
 
     MemberExpression(node: et.MemberExpression, s: any, c: any): void {
+      console.log("MemberExpression", JSON.stringify(node, null, 2))
+      
       const [newReg, freeReg] = newRegisterController()
       const valReg = s.r0
       const objReg = s.r1 || newReg()
@@ -749,6 +794,8 @@ const parseToCode = (ast: any): void => {
     },
 
     AssignmentExpression(node: et.AssignmentExpression, s: any, c: any): any {
+      console.log("AssignmentExpression", JSON.stringify(node, null, 2))
+
       const retReg = s.r0
       const left = node.left
       const right = node.right
@@ -802,6 +849,8 @@ const parseToCode = (ast: any): void => {
     },
 
     BinaryExpression(node: et.BinaryExpression, s: any, c: any): void {
+      console.log("BinaryExpression", JSON.stringify(node, null, 2))
+
       const [newReg, freeReg] = newRegisterController()
 
       const leftReg = s.r0 || newReg()
@@ -824,6 +873,8 @@ const parseToCode = (ast: any): void => {
     },
 
     UnaryExpression(node: et.UnaryExpression, s: any, c: any): void {
+      console.log("UnaryExpression", JSON.stringify(node, null, 2))
+
       const op = node.operator
       const codesMap = {
         '+': 'PLUS',
@@ -858,6 +909,8 @@ const parseToCode = (ast: any): void => {
     },
 
     IfStatement(node: any, s: any, c: any): void {
+      console.log("IfStatement", JSON.stringify(node, null, 2))
+
       // const restoreBlockChain = newBlockChain()
       const [newReg, freeReg] = newRegisterController()
       const retReg = s.r0
@@ -891,10 +944,14 @@ const parseToCode = (ast: any): void => {
     },
 
     ConditionalExpression(node: et.ConditionalExpression, s: any, c: any): void {
+      console.log("ConditionalExpression", JSON.stringify(node, null, 2))
+
       this.IfStatement(node, s, c)
     },
 
     LogicalExpression(node: et.LogicalExpression, s: any, c: any): void {
+      console.log("LogicalExpression", JSON.stringify(node, null, 2))
+
       const [newReg, freeReg] = newRegisterController()
       const retReg = s.r0
       const endLabel = newLabelName()
@@ -919,6 +976,8 @@ const parseToCode = (ast: any): void => {
     },
 
     ForStatement(node: et.ForStatement, s: any, c: any): any {
+      console.log("ForStatement", JSON.stringify(node, null, 2))
+      
       const restoreBlockChainInit = newBlockChain()
       const [newReg, freeReg] = newRegisterController()
       const startLabel = newLabelName()
@@ -992,6 +1051,8 @@ const parseToCode = (ast: any): void => {
     },
 
     ForInStatement(node: et.ForInStatement, s: any, c: any): any {
+      console.log("ForInStatement", JSON.stringify(node, null, 2))
+
       const restoreBlockChain = newBlockChain()
       const left = node.left
       const right = node.right
@@ -1034,14 +1095,20 @@ const parseToCode = (ast: any): void => {
     },
 
     WhileStatement(node: et.WhileStatement, s: any, c: any): any {
+      console.log("WhileStatement", JSON.stringify(node, null, 2))
+
       this.ForStatement(node, s, c)
     },
 
     DoWhileStatement(node: et.DoWhileStatement, s: any, c: any): any {
+      console.log("DoWhileStatement", JSON.stringify(node, null, 2))
+      
       this.ForStatement(node, s, c)
     },
 
     BreakStatement(node: et.BreakStatement, s: any, c: any): any {
+      console.log("BreakStatement", JSON.stringify(node, null, 2))
+
       if (node.label) {
         const { name } = node.label
         if (!blockEndLabels.has(name)) {
@@ -1076,6 +1143,8 @@ const parseToCode = (ast: any): void => {
     },
 
     ContinueStatement(node: et.ContinueStatement, s: any, c: any): any {
+      console.log("ContinueStatement", JSON.stringify(node, null, 2))
+
       if (node.label) {
         const { name } = node.label
         if (!blockEndLabels.has(name)) {
@@ -1107,6 +1176,8 @@ const parseToCode = (ast: any): void => {
     },
 
     UpdateExpression(node: et.UpdateExpression, s: any, c: any): any {
+      console.log("UpdateExpression", JSON.stringify(node, null, 2))
+      
       const op = node.operator
       const [newReg, freeReg] = newRegisterController()
       const retReg = s.r0
@@ -1128,6 +1199,8 @@ const parseToCode = (ast: any): void => {
     },
 
     ObjectExpression(node: et.ObjectExpression, s: any, c: any): any {
+      console.log("ObjectExpression", JSON.stringify(node, null, 2))
+
       const [newReg, freeReg] = newRegisterController()
       const reg = s.r0 || newReg()
       cg([`NEW_OBJ`, `${reg}`])
@@ -1139,6 +1212,8 @@ const parseToCode = (ast: any): void => {
     },
 
     ArrayExpression(node: et.ArrayExpression, s: any, c: any): any {
+      console.log("ArrayExpression", JSON.stringify(node, null, 2))
+
       const [newReg, freeReg] = newRegisterController()
       const reg = s.r0 || newReg()
       cg([`NEW_ARR`, `${reg}`])
@@ -1155,6 +1230,8 @@ const parseToCode = (ast: any): void => {
     },
 
     Property(node: et.Property, s: any, c: any): any {
+      console.log("Property", JSON.stringify(node, null, 2))
+      
       const objReg = s.r0
       const [newReg, freeReg] = newRegisterController()
       const valReg = newReg()
@@ -1173,6 +1250,8 @@ const parseToCode = (ast: any): void => {
     },
 
     ReturnStatement(node: et.ReturnStatement, s: any, c: any): any {
+      console.log("ReturnStatement", JSON.stringify(node, null, 2))
+
       const reg = s.r0 = newRegister()
       if (node.argument) {
         c(node.argument, s)
@@ -1183,6 +1262,8 @@ const parseToCode = (ast: any): void => {
     },
 
     SequenceExpression(node: et.SequenceExpression, s: any, c: any): any {
+      console.log("SequenceExpression", JSON.stringify(node, null, 2))
+
       const r0 = s.r0
       delete s.r0
       node.expressions.forEach((n, i): void => {
@@ -1194,6 +1275,8 @@ const parseToCode = (ast: any): void => {
     },
 
     ThisExpression(node: et.ThisExpression, s: any, c: any): any {
+      console.log("ThisExpression", JSON.stringify(node, null, 2))
+
       if (!s.r0) {
         throw new Error('Access `this` without register r0')
       }
@@ -1201,11 +1284,15 @@ const parseToCode = (ast: any): void => {
     },
 
     NewExpression(node: et.NewExpression, s: any, c: any): any {
+      console.log("NewExpression", JSON.stringify(node, null, 2))
+
       s.isNewExpression = true
       this.CallExpression(node, s, c)
     },
 
     LabeledStatement(node: et.LabeledStatement, s: any, c: any): any {
+      console.log("LabeledStatement", JSON.stringify(node, null, 2))
+      
       const restoreBlockChain = newBlockChain()
       const labelNode = node.label
       const labelName = labelNode.name
@@ -1230,6 +1317,8 @@ const parseToCode = (ast: any): void => {
     },
 
     SwitchStatement(node: et.SwitchStatement, s: any, c: any): any {
+      console.log("SwitchStatement", JSON.stringify(node, null, 2))
+      
       const restoreBlockChain = newBlockChain()
       const [newReg, freeReg] = newRegisterController()
       const discriminantReg = newReg()
@@ -1286,6 +1375,8 @@ const parseToCode = (ast: any): void => {
     },
 
     TryStatement(node: et.TryStatement, s: any, c: any): any {
+      console.log("TryStatement", JSON.stringify(node, null, 2))
+      
       // const restoreBlockChain = newBlockChain()
       const catchLabel: string = newLabelName()
       const finalLabel: string = newLabelName()
@@ -1320,6 +1411,8 @@ const parseToCode = (ast: any): void => {
     },
 
     ThrowStatement(node: et.ThrowStatement, s: any, c: any): any {
+      console.log("ThrowStatement", JSON.stringify(node, null, 2))
+
       const reg = newRegister()
       getValueOfNode(node.argument, reg, s, c)
       cg(['THROW', reg])
@@ -1330,13 +1423,21 @@ const parseToCode = (ast: any): void => {
   state.maxRegister = maxRegister
 }
 
+/**
+ * 获取函数的声明 比如说 func @@main(.arg, .arg2){
+ * @param func 函数结构
+ * @returns 字符
+ */
 const getFunctionDecleration = (func: IFunction): string => {
   const name = func.name
+  // console.log("getFunctionDecleration func.body.params", func.body.params);
+  
   const params = func.body.params.map((p: any): string => '.' + p.name).join(', ')
   return `func ${name}(${params}) {`
 }
 
 export const generateAssemblyFromJs = (jsCode: string): string => {
+  
   const ret = codegen.parse(jsCode)
   let allCodes: any[] = []
 
@@ -1346,6 +1447,7 @@ export const generateAssemblyFromJs = (jsCode: string): string => {
       // console.log(funcBody, '.....?')
       state.r0 = '$RET'
     }
+    // 解析成汇编代码
     parseToCode(funcBody)
     for (let i = 0; i < state.maxRegister; i++) {
       state.codes.push(`REG %r${i}`, 1)
@@ -1355,11 +1457,18 @@ export const generateAssemblyFromJs = (jsCode: string): string => {
     state.codes.clear()
   }
 
+  // 创建一个全局的运行块
   state = createNewState()
+  // 获取全局变量
   const globals = getVariablesByFunctionAstBody(ret)
+  console.log("globals", globals);
+  // 更新块级
   state.blockChain = state.blockChain.newBlock(globals)
   state.codes.push('func @@main() {', 0)
   processFunctionAst(ret)
+
+  // console.log("state.functions", state.functions);
+  
 
   while (state.functions.length > 0) {
     state.isGlobal = false
@@ -1404,6 +1513,8 @@ export const generateAssemblyFromJs = (jsCode: string): string => {
     processFunctionAst(funcInfo.body.body)
   }
 
+  console.log("allCodes", allCodes);
+  
   allCodes = allCodes.map((s: string | (() => string[])): string[] => {
     const f = (c: string): string => {
       if (c.trim() === '') { return ''}
